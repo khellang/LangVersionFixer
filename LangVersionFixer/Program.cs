@@ -22,7 +22,11 @@ namespace LangVersionFixer
             {
                 var document = ReadDocument(filePath);
 
-                document.Descendants(@namespace + "PropertyGroup").First().Add(langeVersionElement);
+                var propertyGroups = document.Descendants(@namespace + "PropertyGroup").ToList();
+
+                var globalPropertyGroup = propertyGroups.FirstOrDefault(x => !x.HasAttributes) ?? propertyGroups.First();
+
+                globalPropertyGroup.Add(langeVersionElement);
 
                 document.Descendants().Where(x => string.IsNullOrWhiteSpace(x.Value) && !x.HasElements).ToList().ForEach(x => x.RemoveNodes());
 
