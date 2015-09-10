@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml;
@@ -10,11 +11,24 @@ namespace LangVersionFixer
     {
         public static void Main(string[] args)
         {
+            if (args.Length < 2)
+            {
+                Console.WriteLine("Usage: LangVersionFixer <folder-with-csprojs> <lang-version-number>");
+                return;
+            }
+
             var directory = args[0];
+
+            int langVersion;
+            if (!int.TryParse(args[1], out langVersion))
+            {
+                Console.WriteLine($"'{args[1]}' is not a valid LangVersion parameter.");
+                return;
+            }
 
             XNamespace @namespace = "http://schemas.microsoft.com/developer/msbuild/2003";
 
-            var langeVersionElement = new XElement(@namespace + "LangVersion") { Value = "5" };
+            var langVersionElement = new XElement(@namespace + "LangVersion") { Value = langVersion.ToString() };
 
             var filePaths = GetFilePaths(directory, "*.csproj");
 
@@ -26,7 +40,7 @@ namespace LangVersionFixer
 
                 var globalPropertyGroup = propertyGroups.FirstOrDefault(x => !x.HasAttributes) ?? propertyGroups.First();
 
-                globalPropertyGroup.Add(langeVersionElement);
+                globalPropertyGroup.Add(langVersionElement);
 
                 document.Descendants().Where(x => string.IsNullOrWhiteSpace(x.Value) && !x.HasElements).ToList().ForEach(x => x.RemoveNodes());
 
