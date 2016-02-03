@@ -19,16 +19,17 @@ namespace LangVersionFixer
 
             var directory = args[0];
 
-            int langVersion;
-            if (!int.TryParse(args[1], out langVersion))
-            {
-                Console.WriteLine($"'{args[1]}' is not a valid LangVersion parameter.");
-                return;
-            }
+			string langVersion = args[1];
+			int langVersionInt;
+			if (!int.TryParse(langVersion, out langVersionInt) && !langVersion.Equals("default"))
+			{
+				Console.WriteLine($"'{args[1]}' is not a valid LangVersion parameter.");
+				return;
+			}
 
-            XNamespace @namespace = "http://schemas.microsoft.com/developer/msbuild/2003";
+			XNamespace @namespace = "http://schemas.microsoft.com/developer/msbuild/2003";
 
-            var langVersionElement = new XElement(@namespace + "LangVersion") { Value = langVersion.ToString() };
+            var langVersionElement = new XElement(@namespace + "LangVersion") { Value = langVersion };
 
             var filePaths = GetFilePaths(directory, "*.csproj");
 
