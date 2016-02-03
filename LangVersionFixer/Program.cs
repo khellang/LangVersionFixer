@@ -24,12 +24,24 @@ namespace LangVersionFixer
 			{
 			    if (!langVersion.Equals("default", StringComparison.OrdinalIgnoreCase))
                 {
-                    Console.WriteLine($"'{langVersion}' is not a valid LangVersion parameter.");
-                    return;
+                    using (ConsoleColorScope.Start(ConsoleColor.Red))
+                    {
+                        Console.WriteLine($"'{langVersion}' is not a valid LangVersion parameter.");
+                        return;
+                    }
                 }
 			}
 
             var directory = new DirectoryInfo(directoryPath);
+
+            if (!directory.Exists)
+            {
+                using (ConsoleColorScope.Start(ConsoleColor.Red))
+                {
+                    Console.WriteLine($"Folder '{directoryPath}' does not exist.");
+                    return;
+                }
+            }
 
             directory.FixLangVersion(langVersion);
         }
@@ -92,6 +104,30 @@ namespace LangVersionFixer
             using (var readStream = File.OpenRead(file.FullName))
             {
                 return XDocument.Load(readStream);
+            }
+        }
+
+        private class ConsoleColorScope : IDisposable
+        {
+            private ConsoleColorScope(ConsoleColor color)
+            {
+                Color = color;
+            }
+
+            private ConsoleColor Color { get; }
+
+            public static IDisposable Start(ConsoleColor foregroundColor)
+            {
+                var scope = new ConsoleColorScope(Console.ForegroundColor);
+
+                Console.ForegroundColor = foregroundColor;
+
+                return scope;
+            }
+
+            public void Dispose()
+            {
+                Console.ForegroundColor = Color;
             }
         }
     }
