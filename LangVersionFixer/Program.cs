@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml;
@@ -17,56 +16,83 @@ namespace LangVersionFixer
                 return;
             }
 
-            var directory = args[0];
+            var directoryPath = args[0];
+			var langVersion = args[1];
 
-			string langVersion = args[1];
-			int langVersionInt;
-			if (!int.TryParse(langVersion, out langVersionInt) && !langVersion.Equals("default"))
+			int parsedLangVersion;
+			if (!int.TryParse(langVersion, out parsedLangVersion))
 			{
-				Console.WriteLine($"'{args[1]}' is not a valid LangVersion parameter.");
-				return;
+			    if (!langVersion.Equals("default", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"'{langVersion}' is not a valid LangVersion parameter.");
+                    return;
+                }
 			}
 
-			XNamespace @namespace = "http://schemas.microsoft.com/developer/msbuild/2003";
+            var directory = new DirectoryInfo(directoryPath);
+
+            directory.FixLangVersion(langVersion);
+        }
+
+        private static void FixLangVersion(this DirectoryInfo directory, string langVersion)
+        {
+            XNamespace @namespace = "http://schemas.microsoft.com/developer/msbuild/2003";
 
             var langVersionElement = new XElement(@namespace + "LangVersion") { Value = langVersion };
 
-            var filePaths = GetFilePaths(directory, "*.csproj");
+            var files = directory.EnumerateFiles("*.csproj", SearchOption.AllDirectories);
 
-            foreach (var filePath in filePaths)
+            var settings = new XmlWriterSettings { Indent = true };
+
+            foreach (var file in files)
             {
-                var document = ReadDocument(filePath);
+                var document = file.ReadXmlDocument();
 
-                var propertyGroups = document.Descendants(@namespace + "PropertyGroup").ToList();
+                document.AddLangVersionElement(@namespace, langVersionElement);
 
-                var globalPropertyGroup = propertyGroups.FirstOrDefault(x => !x.HasAttributes) ?? propertyGroups.First();
+                document.CleanUpEmptyElements();
 
-                globalPropertyGroup.Add(langVersionElement);
-
-                document.Descendants().Where(x => string.IsNullOrWhiteSpace(x.Value) && !x.HasElements).ToList().ForEach(x => x.RemoveNodes());
-
-                document.Descendants().Where(x => (x.IsEmpty || string.IsNullOrWhiteSpace(x.Value)) && !x.HasAttributes && !x.HasElements).Remove();
-
-                var settings = new XmlWriterSettings { Indent = true };
-
-                using (var writer = XmlWriter.Create(filePath, settings))
+                using (var writer = XmlWriter.Create(file.FullName, settings))
                 {
                     document.Save(writer);
                 }
             }
         }
 
-        private static XDocument ReadDocument(string filePath)
+        private static void AddLangVersionElement(this XContainer document, XNamespace @namespace, XElement langVersionElement)
         {
-            using (var readStream = File.OpenRead(filePath))
+            var propertyGroups = document
+                .Descendants(@namespace + "PropertyGroup")
+                .ToList();
+
+            var emptyPropertyGroup = propertyGroups.FirstOrDefault(x => !x.HasAttributes);
+
+            var globalPropertyGroup = emptyPropertyGroup ?? propertyGroups.First();
+
+            globalPropertyGroup.Add(langVersionElement);
+        }
+
+        private static void CleanUpEmptyElements(this XContainer document)
+        {
+            document.Descendants().Where(element => element.IsEmpty()).Remove();
+        }
+
+        private static bool IsEmpty(this XElement element)
+        {
+            return element.HasNoValue() && !element.HasAttributes && !element.HasElements;
+        }
+
+        private static bool HasNoValue(this XElement element)
+        {
+            return element.IsEmpty || string.IsNullOrWhiteSpace(element.Value);
+        }
+
+        private static XDocument ReadXmlDocument(this FileSystemInfo file)
+        {
+            using (var readStream = File.OpenRead(file.FullName))
             {
                 return XDocument.Load(readStream);
             }
-        }
-
-        private static IEnumerable<string> GetFilePaths(string path, string searchPattern)
-        {
-            return Directory.EnumerateFiles(path, searchPattern, SearchOption.AllDirectories);
         }
     }
 }

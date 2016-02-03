@@ -6,7 +6,7 @@ A tiny utility to set the `LangVersion` property of all *.csprojs in a folder
 
 Download the latest release from [here](https://github.com/khellang/LangVersionFixer/releases/latest).
 
-Then run `LangVersionFixer <folder-with-csprojs> <lang-version-number>`.
+Then run `LangVersionFixer <folder-with-csprojs> <lang-version-number|'default'>`.
 
 ### Example
 
