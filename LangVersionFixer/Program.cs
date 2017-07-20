@@ -18,23 +18,21 @@ namespace LangVersionFixer
 
             var directoryPath = args[0];
             var langVersion = args[1];
-
             var cleanDocument = true;
+
             if (args.Length > 2)
             {
-                var parseOk = Boolean.TryParse(args[2], out cleanDocument);
-                if (!parseOk)
+                if (!bool.TryParse(args[2], out cleanDocument))
                 {
                     using (ConsoleColorScope.Start(ConsoleColor.Red))
                     {
-                        Console.WriteLine($"Could not convert '{args[2].ToString()}' to boolean.");
+                        Console.WriteLine($"Could not convert '{args[2]}' to boolean.");
                         return -1;
                     }
                 }
             }
 
-            int parsedLangVersion;
-            if (!int.TryParse(langVersion, out parsedLangVersion))
+            if (!int.TryParse(langVersion, out int parsedLangVersion))
             {
                 if (!langVersion.Equals("default", StringComparison.OrdinalIgnoreCase))
                 {
@@ -57,7 +55,7 @@ namespace LangVersionFixer
                 }
             }
 
-            directory.FixLangVersion(langVersion, cleanDocument);
+            directory.FixLangVersion(parsedLangVersion, cleanDocument);
 
             using (ConsoleColorScope.Start(ConsoleColor.Green))
             {
@@ -66,7 +64,7 @@ namespace LangVersionFixer
             }
         }
 
-        private static void FixLangVersion(this DirectoryInfo directory, string langVersion, bool cleanDocument = true)
+        private static void FixLangVersion(this DirectoryInfo directory, int langVersion, bool cleanDocument = true)
         {
             XNamespace @namespace = "http://schemas.microsoft.com/developer/msbuild/2003";
 
@@ -96,7 +94,7 @@ namespace LangVersionFixer
             }
         }
 
-        private static void AddLangVersionElement(this XContainer document, XNamespace @namespace, string langVersion)
+        private static void AddLangVersionElement(this XContainer document, XNamespace @namespace, int langVersion)
         {
             var propertyGroups = document
                 .Descendants(@namespace + "PropertyGroup")
@@ -117,15 +115,15 @@ namespace LangVersionFixer
 
             if (globalPropertyGroup == null)
             {
-                using (ConsoleColorScope.Start(ConsoleColor.Yellow))
-                {
-                    Console.WriteLine("No PropertyGroup element found in file.");
-                }
+                document.Add(globalPropertyGroup = new XElement(@namespace + "PropertyGroup"));
             }
-            else
+
+            var newElement = new XElement(@namespace + "LangVersion")
             {
-                globalPropertyGroup.Add(new XElement(@namespace + "LangVersion") { Value = langVersion });
-            }
+                Value = langVersion.ToString()
+            };
+
+            globalPropertyGroup.Add(newElement);
         }
 
         private static void CleanUpEmptyElements(this XContainer document)
