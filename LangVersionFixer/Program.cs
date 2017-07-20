@@ -12,17 +12,31 @@ namespace LangVersionFixer
         {
             if (args.Length < 2)
             {
-                Console.WriteLine("Usage: LangVersionFixer <folder-with-csprojs> <lang-version-number>");
+                Console.WriteLine("Usage: LangVersionFixer <folder-with-csprojs> <lang-version-number> [<clean-document>]");
                 return -1;
             }
 
             var directoryPath = args[0];
-			var langVersion = args[1];
+            var langVersion = args[1];
 
-			int parsedLangVersion;
-			if (!int.TryParse(langVersion, out parsedLangVersion))
-			{
-			    if (!langVersion.Equals("default", StringComparison.OrdinalIgnoreCase))
+            var cleanDocument = true;
+            if (args.Length > 2)
+            {
+                var parseOk = Boolean.TryParse(args[2], out cleanDocument);
+                if (!parseOk)
+                {
+                    using (ConsoleColorScope.Start(ConsoleColor.Red))
+                    {
+                        Console.WriteLine($"Could not convert '{args[2].ToString()}' to boolean.");
+                        return -1;
+                    }
+                }
+            }
+
+            int parsedLangVersion;
+            if (!int.TryParse(langVersion, out parsedLangVersion))
+            {
+                if (!langVersion.Equals("default", StringComparison.OrdinalIgnoreCase))
                 {
                     using (ConsoleColorScope.Start(ConsoleColor.Red))
                     {
@@ -30,7 +44,7 @@ namespace LangVersionFixer
                         return -1;
                     }
                 }
-			}
+            }
 
             var directory = new DirectoryInfo(directoryPath);
 
@@ -43,7 +57,7 @@ namespace LangVersionFixer
                 }
             }
 
-            directory.FixLangVersion(langVersion);
+            directory.FixLangVersion(langVersion, cleanDocument);
 
             using (ConsoleColorScope.Start(ConsoleColor.Green))
             {
@@ -52,7 +66,7 @@ namespace LangVersionFixer
             }
         }
 
-        private static void FixLangVersion(this DirectoryInfo directory, string langVersion)
+        private static void FixLangVersion(this DirectoryInfo directory, string langVersion, bool cleanDocument = true)
         {
             XNamespace @namespace = "http://schemas.microsoft.com/developer/msbuild/2003";
 
@@ -70,7 +84,10 @@ namespace LangVersionFixer
 
                 document.AddLangVersionElement(@namespace, langVersion);
 
-                document.CleanUpEmptyElements();
+                if (cleanDocument)
+                {
+                    document.CleanUpEmptyElements();
+                }
 
                 using (var writer = XmlWriter.Create(file.FullName, settings))
                 {
@@ -96,9 +113,19 @@ namespace LangVersionFixer
 
             var emptyPropertyGroup = propertyGroups.FirstOrDefault(x => !x.HasAttributes);
 
-            var globalPropertyGroup = emptyPropertyGroup ?? propertyGroups.First();
+            var globalPropertyGroup = emptyPropertyGroup ?? propertyGroups.FirstOrDefault();
 
-            globalPropertyGroup.Add(new XElement(@namespace + "LangVersion") { Value = langVersion });
+            if (globalPropertyGroup == null)
+            {
+                using (ConsoleColorScope.Start(ConsoleColor.Yellow))
+                {
+                    Console.WriteLine("No PropertyGroup element found in file.");
+                }
+            }
+            else
+            {
+                globalPropertyGroup.Add(new XElement(@namespace + "LangVersion") { Value = langVersion });
+            }
         }
 
         private static void CleanUpEmptyElements(this XContainer document)
