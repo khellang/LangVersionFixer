@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Xml;
@@ -32,9 +33,10 @@ namespace LangVersionFixer
                 }
             }
 
-            if (!int.TryParse(langVersion, out int parsedLangVersion))
+            if (!double.TryParse(langVersion, out var _))
             {
-                if (!langVersion.Equals("default", StringComparison.OrdinalIgnoreCase))
+                if (!langVersion.Equals("default", StringComparison.OrdinalIgnoreCase) &&
+                    !langVersion.Equals("latest", StringComparison.OrdinalIgnoreCase))
                 {
                     using (ConsoleColorScope.Start(ConsoleColor.Red))
                     {
@@ -55,7 +57,7 @@ namespace LangVersionFixer
                 }
             }
 
-            directory.FixLangVersion(parsedLangVersion, cleanDocument);
+            directory.FixLangVersion(langVersion, cleanDocument);
 
             using (ConsoleColorScope.Start(ConsoleColor.Green))
             {
@@ -64,7 +66,7 @@ namespace LangVersionFixer
             }
         }
 
-        private static void FixLangVersion(this DirectoryInfo directory, int langVersion, bool cleanDocument = true)
+        private static void FixLangVersion(this DirectoryInfo directory, string langVersion, bool cleanDocument = true)
         {
             XNamespace @namespace = "http://schemas.microsoft.com/developer/msbuild/2003";
 
@@ -94,7 +96,7 @@ namespace LangVersionFixer
             }
         }
 
-        private static void AddLangVersionElement(this XContainer document, XNamespace @namespace, int langVersion)
+        private static void AddLangVersionElement(this XContainer document, XNamespace @namespace, string langVersion)
         {
             var propertyGroups = document
                 .Descendants(@namespace + "PropertyGroup")
@@ -120,7 +122,7 @@ namespace LangVersionFixer
 
             var newElement = new XElement(@namespace + "LangVersion")
             {
-                Value = langVersion.ToString()
+                Value = langVersion
             };
 
             globalPropertyGroup.Add(newElement);
