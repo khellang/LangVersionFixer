@@ -77,9 +77,9 @@ namespace LangVersionFixer
 
             foreach (var file in files)
             {
-                var document = file.ReadXmlDocument();
+                Console.WriteLine($"Processing {file.Name}.");
 
-                Console.WriteLine($"Processed {file.Name}.");
+                var document = file.ReadXmlDocument();
 
                 document.AddLangVersionElement(@namespace, langVersion);
 
