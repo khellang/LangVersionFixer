@@ -71,8 +71,6 @@ namespace LangVersionFixer
 
             var files = directory.EnumerateFiles("*.csproj", SearchOption.AllDirectories);
 
-            var settings = new XmlWriterSettings { Indent = true };
-
             Console.WriteLine($"Setting LangVersion to {langVersion} in all projects under {directory.FullName}...");
 
             foreach (var file in files)
@@ -87,6 +85,12 @@ namespace LangVersionFixer
                 {
                     document.CleanUpEmptyElements();
                 }
+
+                var settings = new XmlWriterSettings
+                {
+                    Indent = true,
+                    OmitXmlDeclaration = document.Declaration == null
+                };
 
                 using (var writer = XmlWriter.Create(file.FullName, settings))
                 {
