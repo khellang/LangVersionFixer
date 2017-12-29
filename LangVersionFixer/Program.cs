@@ -79,7 +79,9 @@ namespace LangVersionFixer
 
                 var document = file.ReadXmlDocument();
 
-                document.AddLangVersionElement(@namespace, langVersion);
+                var isNetCore = document.Root?.Attribute("Sdk") != null;
+
+                document.AddLangVersionElement(isNetCore ? "" : @namespace, langVersion);
 
                 if (cleanDocument)
                 {
